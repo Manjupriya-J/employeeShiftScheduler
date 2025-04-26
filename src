@@ -1,0 +1,192 @@
+import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.function.Consumer;
+
+public class EmployeeShiftScheduler {
+
+    // Database connection parameters
+    static final String DB_URL = "jdbc:mysql://localhost:3306/employeedB"; // Update your database details if needed
+    static final String USER = "root"; // Replace with your MySQL username
+    static final String PASS = "Manju@123"; // Replace with your MySQL password
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS)) {
+            System.out.println("Connected to the database successfully.");
+
+            // Rule-based switch using a map
+            Map<Integer, Consumer<Connection>> actionMap = new HashMap<>();
+            actionMap.put(1, connection -> addEmployee(connection, sc));
+            actionMap.put(2, connection -> updateEmployee(connection, sc));
+            actionMap.put(3, connection -> deleteEmployee(connection, sc));
+            actionMap.put(4, connection -> viewAllEmployees(connection));
+            actionMap.put(5, connection -> scheduleShift(connection, sc));
+            actionMap.put(6, connection -> viewEmployeeShifts(connection, sc));
+
+            // Menu loop
+            while (true) {
+                System.out.println("\nEmployee Shift Scheduler Menu:");
+                System.out.println("1. Add Employee");
+                System.out.println("2. Update Employee");
+                System.out.println("3. Delete Employee");
+                System.out.println("4. View All Employees");
+                System.out.println("5. Schedule Shift for Employee");
+                System.out.println("6. View Employee Shifts");
+                System.out.println("0. Exit");
+                System.out.print("Choose an option: ");
+                int choice = sc.nextInt();
+                sc.nextLine(); // consume newline
+
+                if (choice == 0) {
+                    System.out.println("Exiting...");
+                    break;
+                }
+
+                // Look up and execute action based on user input
+                Consumer<Connection> action = actionMap.get(choice);
+                if (action != null) {
+                    action.accept(conn);
+                } else {
+                    System.out.println("Invalid choice! Please try again.");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to add an employee
+    public static void addEmployee(Connection conn, Scanner sc) {
+        try {
+            System.out.print("Enter employee name: ");
+            String name = sc.nextLine();
+            System.out.print("Enter employee role: ");
+            String role = sc.nextLine();
+            System.out.print("Enter employee salary: ");
+            double salary = sc.nextDouble();
+
+            String query = "INSERT INTO employees (name, role, salary) VALUES (?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, name);
+                stmt.setString(2, role);
+                stmt.setDouble(3, salary);
+                int rows = stmt.executeUpdate();
+                System.out.println(rows + " employee(s) added.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to update an employee
+    public static void updateEmployee(Connection conn, Scanner sc) {
+        try {
+            System.out.print("Enter employee ID to update: ");
+            int id = sc.nextInt();
+            sc.nextLine(); // consume newline
+            System.out.print("Enter new employee name: ");
+            String name = sc.nextLine();
+            System.out.print("Enter new employee role: ");
+            String role = sc.nextLine();
+            System.out.print("Enter new employee salary: ");
+            double salary = sc.nextDouble();
+
+            String query = "UPDATE employees SET name = ?, role = ?, salary = ? WHERE id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, name);
+                stmt.setString(2, role);
+                stmt.setDouble(3, salary);
+                stmt.setInt(4, id);
+                int rows = stmt.executeUpdate();
+                System.out.println(rows + " employee(s) updated.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to delete an employee
+    public static void deleteEmployee(Connection conn, Scanner sc) {
+        try {
+            System.out.print("Enter employee ID to delete: ");
+            int id = sc.nextInt();
+
+            String query = "DELETE FROM employees WHERE id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, id);
+                int rows = stmt.executeUpdate();
+                System.out.println(rows + " employee(s) deleted.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to view all employees
+    public static void viewAllEmployees(Connection conn) {
+        try {
+            String query = "SELECT * FROM employees";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(query)) {
+                System.out.println("Employee List:");
+                while (rs.next()) {
+                    System.out.printf("ID: %d, Name: %s, Role: %s, Salary: %.2f%n",
+                            rs.getInt("id"), rs.getString("name"), rs.getString("role"), rs.getDouble("salary"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to schedule a shift for an employee
+    public static void scheduleShift(Connection conn, Scanner sc) {
+        try {
+            System.out.print("Enter employee ID to schedule shift: ");
+            int employeeId = sc.nextInt();
+            sc.nextLine(); // consume newline
+            System.out.print("Enter shift date (YYYY-MM-DD): ");
+            String shiftDate = sc.nextLine();
+            System.out.print("Enter shift time (e.g., 09:00-17:00): ");
+            String shiftTime = sc.nextLine();
+
+            String query = "INSERT INTO shifts (employee_id, shift_date, shift_time) VALUES (?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, employeeId);
+                stmt.setString(2, shiftDate);
+                stmt.setString(3, shiftTime);
+                int rows = stmt.executeUpdate();
+                System.out.println(rows + " shift(s) scheduled.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to view an employee's shifts
+    public static void viewEmployeeShifts(Connection conn, Scanner sc) {
+        try {
+            System.out.print("Enter employee ID to view shifts: ");
+            int employeeId = sc.nextInt();
+
+            String query = "SELECT * FROM shifts WHERE employee_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setInt(1, employeeId);
+                ResultSet rs = stmt.executeQuery();
+                System.out.println("Shift Schedule:");
+                while (rs.next()) {
+                    System.out.printf("Shift ID: %d, Date: %s, Time: %s%n",
+                            rs.getInt("id"), rs.getString("shift_date"), rs.getString("shift_time"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+	
