@@ -2,7 +2,7 @@
 This project is a simple and efficient Java-based application designed to automate the process of assigning and managing employee shifts. It is ideal for small to medium-sized teams where manual scheduling can become time-consuming and error-prone.
 
 🔧 Technologies Used
-Java – Core logic and GUI (if any)
+Java – Core logic and GUI 
 
 MySQL – Backend database for storing employee and shift details
 
